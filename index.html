@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>График дежурств</title>
+    <title>Увалы</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -49,10 +49,11 @@
         const { useState, useEffect, useMemo, useCallback } = React;
 
         // КЛЮЧ ХРАНИЛИЩА. Для другого сайта измените этот ID!
-        const STORAGE_ID = "XXNk2AAo7MEDxed7bQD9LL";
+        
+        const STORAGE_ID = "Mpiv4TNHfTptNXfm1W7xBp";
         const SCHEDULE_API_URL = `https://kvdb.io/${STORAGE_ID}/schedule`;
 
-        const NAMES = ['🚫', 'ТЕСЛА', 'НИК', 'ВОРОН'];
+        const NAMES = ['', 'ФОКС', 'ПИВОВАР', 'НАТО'];
         const WEEK_DAYS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
 
         const App = () => {
