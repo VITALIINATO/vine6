@@ -10,7 +10,15 @@
         body {
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
-             background-image: url('6.jpg');
+           background-image: url('6.jpg');
+    background-size: cover; /* Или '100% 100%', если нужно растянуть с искажением */
+    background-position: center; /* Центрирует изображение */
+    background-repeat: no-repeat; /* Убирает повторение картинки */
+    background-attachment: fixed; /* Фиксирует фон при прокрутке (по желанию) */
+    
+    /* Чтобы фон занял всю высоту экрана */
+    min-height: 100vh;
+    margin: 0;
         }
 
         .calendar-grid {
