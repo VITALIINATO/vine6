@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>График дежурств</title>
+    <title>Увалы</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -48,7 +48,7 @@
     <script type="text/babel">
         const { useState, useEffect, useMemo, useCallback } = React;
 
-        // КЛЮЧ ХРАНИЛИЩА. Для другого сайта измените этот ID!
+        // КЛЮЧ ХРАНИЛИЩА
         const STORAGE_ID = "Mpiv4TNHfTptNXfm1W7xBp";
         const SCHEDULE_API_URL = `https://kvdb.io/${STORAGE_ID}/schedule`;
 
@@ -74,7 +74,7 @@
                         const response = await fetch(SCHEDULE_API_URL, { cache: 'no-cache' });
                         if (response.ok) {
                             const data = await response.json();
-                            setSchedule(data);
+                            setSchedule(data || {});
                         }
                     } catch (error) {
                         console.error("Ошибка загрузки:", error);
@@ -103,7 +103,7 @@
             const handleSelectPerson = (date, person) => {
                 const key = date.toISOString().split('T')[0];
                 const newSchedule = { ...schedule };
-                if (person && person !== '🚫') {
+                if (person && person.trim() !== '') {
                     newSchedule[key] = person;
                 } else {
                     delete newSchedule[key];
@@ -153,7 +153,7 @@
                         <header className="p-6 flex items-center justify-between border-b border-slate-100">
                             <h1 className="text-xl font-bold text-slate-800 flex items-center gap-2">
                                 <span className="w-2 h-6 bg-indigo-600 rounded-full"></span>
-                                График дежурств
+                                Увалы
                             </h1>
                             <div className="flex items-center gap-4">
                                 <button onClick={() => changeMonth(-1)} className="p-2 hover:bg-slate-50 rounded-xl transition-colors">
