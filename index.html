@@ -1,59 +1,75 @@
 <!DOCTYPE html>
 <html lang="ru">
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Увалы</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body {
-            font-family: 'Inter', sans-serif;
             -webkit-font-smoothing: antialiased;
-            background: #F8FAFC;
+            -moz-osx-font-smoothing: grayscale;
         }
+
         .calendar-grid {
             display: grid;
-            grid-template-columns: repeat(7, 1fr);
+            grid-template-columns: repeat(7, minmax(0, 1fr));
         }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
         .loader {
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #4f46e5;
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-left-color: #8b5cf6;
             border-radius: 50%;
-            width: 24px;
-            height: 24px;
+            width: 40px;
+            height: 40px;
             animation: spin 1s linear infinite;
         }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        
+
+        /* Убираем стандартную стрелку у select */
         select {
             -webkit-appearance: none;
             -moz-appearance: none;
             appearance: none;
-            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b'%3e%3cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3e%3c/svg%3e");
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
             background-position: right 0.5rem center;
             background-repeat: no-repeat;
-            background-size: 1em;
+            background-size: 0.1em 0.1em;
+            padding-right: 2.25rem;
         }
     </style>
+    <script type="importmap">
+{
+  "imports": {
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/"
+  }
+}
+</script>
 </head>
-<body>
+
+<body class="bg-gradient-to-br from-indigo-50 to-purple-50">
     <div id="root"></div>
 
-    <!-- Загрузка React и Babel из CDN -->
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
     <script type="text/babel">
         const { useState, useEffect, useMemo, useCallback } = React;
 
-        // КЛЮЧ ХРАНИЛИЩА
-        const STORAGE_ID = "Mpiv4TNHfTptNXfm1W7xBp";
-        const SCHEDULE_API_URL = `https://kvdb.io/${STORAGE_ID}/schedule`;
+        const SCHEDULE_API_URL = "https://kvdb.io/Mpiv4TNHfTptNXfm1W7xBp/schedule";
 
-        const NAMES = ['', 'ФОКС', 'ПИВОВАР', 'НАТО'];
-        const WEEK_DAYS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+        const NAMES = [
+            '', 'ФОКС', 'ПИВОВАР', 'НАТО'
+        ];
 
         const App = () => {
             const [currentDate, setCurrentDate] = useState(new Date());
@@ -74,10 +90,12 @@
                         const response = await fetch(SCHEDULE_API_URL, { cache: 'no-cache' });
                         if (response.ok) {
                             const data = await response.json();
-                            setSchedule(data || {});
+                            setSchedule(data);
+                        } else if (response.status !== 404) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
                         }
                     } catch (error) {
-                        console.error("Ошибка загрузки:", error);
+                        console.error("Не удалось загрузить график:", error);
                     } finally {
                         setIsLoading(false);
                     }
@@ -94,51 +112,53 @@
                         body: JSON.stringify(newSchedule)
                     });
                 } catch (error) {
-                    console.error("Ошибка сохранения:", error);
+                    console.error("Ошибка сохранения графика:", error);
                 } finally {
                     setIsSaving(false);
                 }
             }, []);
 
-            const handleSelectPerson = (date, person) => {
+            const handleSelectPerson = useCallback((date, person) => {
                 const key = date.toISOString().split('T')[0];
-                const newSchedule = { ...schedule };
-                if (person && person.trim() !== '') {
-                    newSchedule[key] = person;
-                } else {
-                    delete newSchedule[key];
-                }
-                setSchedule(newSchedule);
-                saveSchedule(newSchedule);
-            };
+                setSchedule(prevSchedule => {
+                    const newSchedule = { ...prevSchedule };
+                    if (person) {
+                        newSchedule[key] = person;
+                    } else {
+                        delete newSchedule[key];
+                    }
+                    saveSchedule(newSchedule);
+                    return newSchedule;
+                });
+            }, [saveSchedule]);
 
             const changeMonth = (offset) => {
-                setCurrentDate(prev => new Date(prev.getFullYear(), prev.getMonth() + offset, 1));
+                setCurrentDate(prevDate => {
+                    const newDate = new Date(prevDate.getFullYear(), prevDate.getMonth() + offset, 1);
+                    return newDate;
+                });
             };
 
             const calendarDays = useMemo(() => {
                 const year = currentDate.getFullYear();
                 const month = currentDate.getMonth();
-                const firstDay = new Date(year, month, 1);
-                const lastDay = new Date(year, month + 1, 0);
-                const startDay = (firstDay.getDay() + 6) % 7;
+                const firstDayOfMonth = new Date(year, month, 1);
+                const lastDayOfMonth = new Date(year, month + 1, 0);
+                const daysInMonth = lastDayOfMonth.getDate();
+                const startDayOfWeek = (firstDayOfMonth.getDay() + 6) % 7;
                 const days = [];
 
-                const prevMonthLast = new Date(year, month, 0).getDate();
-                for (let i = startDay; i > 0; i--) {
-                    days.push({ date: new Date(year, month - 1, prevMonthLast - i + 1), current: false });
+                const prevMonthLastDay = new Date(year, month, 0).getDate();
+                for (let i = startDayOfWeek; i > 0; i--) {
+                    days.push({ date: new Date(year, month - 1, prevMonthLastDay - i + 1), isCurrentMonth: false });
                 }
-                for (let i = 1; i <= lastDay.getDate(); i++) {
-                    const d = new Date(year, month, i);
-                    days.push({ 
-                        date: d, 
-                        current: true, 
-                        isToday: d.getTime() === today.getTime() 
-                    });
+                for (let i = 1; i <= daysInMonth; i++) {
+                    const date = new Date(year, month, i);
+                    days.push({ date, isCurrentMonth: true, isToday: date.getTime() === today.getTime() });
                 }
-                while (days.length < 42) {
-                    const d = new Date(year, month + 1, days.length - lastDay.getDate() - startDay + 1);
-                    days.push({ date: d, current: false });
+                const remainingCells = 42 - days.length;
+                for (let i = 1; i <= remainingCells; i++) {
+                    days.push({ date: new Date(year, month + 1, i), isCurrentMonth: false });
                 }
                 return days;
             }, [currentDate, today]);
@@ -146,82 +166,101 @@
             if (isLoading) {
                 return (
                     <div className="flex flex-col items-center justify-center min-h-screen">
-                        <div className="loader mb-4"></div>
-                        <p className="text-slate-500 font-medium">Загрузка графика...</p>
+                        <div className="loader"></div>
+                        <div className="mt-4 text-lg font-semibold text-indigo-600">Загрузка графика...</div>
                     </div>
                 );
             }
 
             return (
-                <div className="max-w-4xl mx-auto p-4 sm:p-8">
-                    <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
-                        <header className="p-6 flex items-center justify-between border-b border-slate-100">
-                            <h1 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-                                <span className="w-2 h-6 bg-indigo-600 rounded-full"></span>
-                                Увалы
-                            </h1>
-                            <div className="flex items-center gap-4">
-                                <button onClick={() => changeMonth(-1)} className="p-2 hover:bg-slate-50 rounded-xl transition-colors">
-                                    <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7"/></svg>
-                                </button>
-                                <span className="font-semibold text-slate-700 capitalize min-w-[140px] text-center">
-                                    {currentDate.toLocaleString('ru-RU', { month: 'long', year: 'numeric' })}
-                                </span>
-                                <button onClick={() => changeMonth(1)} className="p-2 hover:bg-slate-50 rounded-xl transition-colors">
-                                    <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>
-                                </button>
-                            </div>
+                <div className="flex flex-col items-center justify-center min-h-screen p-2 sm:p-4">
+                    <div className="w-full max-w-4xl bg-white rounded-2xl shadow-xl p-4 sm:p-6">
+                        <header className="flex items-center justify-between mb-4">
+                            <button onClick={() => changeMonth(-1)} className="p-2 rounded-full hover:bg-indigo-50 transition-colors">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+                            </button>
+
+                            <h2 className="text-lg sm:text-xl font-bold text-indigo-800 text-center capitalize">
+                                {currentDate.toLocaleString('ru-RU', { month: 'long' })} {currentDate.getFullYear()}
+                            </h2>
+                            
+                            <button onClick={() => changeMonth(1)} className="p-2 rounded-full hover:bg-indigo-50 transition-colors">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                            </button>
                         </header>
 
-                        <div className="calendar-grid bg-slate-50/50 border-b border-slate-100">
-                            {WEEK_DAYS.map(d => <div key={d} className="py-3 text-center text-[10px] font-bold text-slate-400 uppercase tracking-widest">{d}</div>)}
+                        <div className="calendar-grid text-xs sm:text-sm text-center font-bold text-indigo-900 mb-2">
+                            <div>Пн</div><div>Вт</div><div>Ср</div><div>Чт</div><div>Пт</div><div>Сб</div><div>Вс</div>
                         </div>
 
-                        <div className="calendar-grid">
-                            {calendarDays.map(({ date, current, isToday }, i) => {
-                                const key = date.toISOString().split('T')[0];
-                                const person = schedule[key];
-                                const isPast = date.getTime() < today.getTime();
+                       <div className="calendar-grid">
+  {calendarDays.map(({ date, isCurrentMonth, isToday }) => {
+    const key = date.toISOString().split('T')[0];
+    const selectedPerson = schedule[key];
+    const isPast = date.getTime() < today.getTime();
 
-                                return (
-                                    <div key={key} className={`min-h-[100px] p-2 border-r border-b border-slate-50 flex flex-col ${!current ? 'opacity-30' : ''}`}>
-                                        <div className="flex justify-between items-start mb-2">
-                                            <span className={`w-7 h-7 flex items-center justify-center rounded-full text-sm font-bold ${isToday ? 'bg-indigo-600 text-white' : 'text-slate-600'}`}>
-                                                {date.getDate()}
-                                            </span>
-                                            {person && current && (
-                                                <div className={`w-2 h-2 rounded-full ${isPast ? 'bg-slate-300' : 'bg-emerald-500'}`}></div>
-                                            )}
-                                        </div>
-                                        {current && (
-                                            <select 
-                                                value={person || ''} 
-                                                onChange={(e) => handleSelectPerson(date, e.target.value)}
-                                                className={`mt-auto w-full text-xs py-1 px-1 rounded-lg border-none focus:ring-0 cursor-pointer ${person ? 'text-indigo-600 font-bold bg-indigo-50' : 'text-slate-300'}`}
-                                            >
-                                                <option value="">—</option>
-                                                {NAMES.map(n => <option key={n} value={n}>{n}</option>)}
-                                            </select>
-                                        )}
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    </div>
-                    <div className="mt-4 flex justify-between items-center px-2">
-                        <div className="flex gap-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                            <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-emerald-500"></div> План</div>
-                            <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-slate-300"></div> Архив</div>
-                        </div>
-                        {isSaving && <div className="text-[10px] font-bold text-indigo-500 uppercase animate-pulse">Сохранение...</div>}
+    const dayClass = `aspect-square flex flex-col justify-start items-center p-1 sm:p-2 border transition-all duration-200 rounded-lg ${
+      isCurrentMonth
+        ? selectedPerson
+          ? 'bg-gradient-to-br from-violet-50 to-purple-50 border-violet-200'
+          : 'bg-white border-slate-200 hover:bg-indigo-50'
+        : 'bg-slate-100 text-slate-400 border-transparent'
+    }`;
+    
+    const dateTextClass = `w-7 h-7 flex items-center justify-center rounded-full text-sm sm:text-base font-medium ${
+      isCurrentMonth ? 'text-indigo-800' : 'text-slate-400'
+    } ${isToday ? 'bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-bold shadow-md scale-110' : ''}`;
+    
+    const selectClass = `w-full mt-0.5 text-xs sm:text-sm bg-transparent focus:outline-none text-center cursor-pointer truncate py-1 font-medium ${
+      selectedPerson ? 'text-purple-700 font-semibold' : 'text-slate-600'
+    }`;
+
+    return (
+   <div key={key} className={dayClass}>
+  <time dateTime={key} className={dateTextClass}>
+    {date.getDate()}
+  </time>
+  {isCurrentMonth && selectedPerson && (
+    <>
+      {/* Сегодня или прошлое → зелёная */}
+      {(isPast || isToday) && (
+        <div className="my-0.5 w-2 h-2 bg-green-500 rounded-full" title="Дежурство завершено"></div>
+      )}
+      {/* Будущее → жёлтая */}
+      {!isPast && !isToday && (
+        <div className="my-0.5 w-2 h-2 bg-yellow-500 rounded-full" title="Дежурство запланировано"></div>
+      )}
+    </>
+  )}
+  {isCurrentMonth && (
+    <div className="w-full mt-auto">
+      <select
+        value={selectedPerson || ''}
+        onChange={(e) => handleSelectPerson(date, e.target.value)}
+        className={selectClass}
+        aria-label={`Назначить дежурного на ${key}`}
+      >
+        <option value=""></option>
+        {NAMES.map(name => <option key={name} value={name}>{name}</option>)}
+      </select>
+    </div>
+  )}
+</div>
+
+    );
+  })}
+</div>
+
+                        {isSaving && <div className="absolute bottom-4 right-4 text-xs text-violet-600 font-medium animate-pulse">Сохранение...</div>}
                     </div>
                 </div>
             );
         };
 
-        const root = ReactDOM.createRoot(document.getElementById('root'));
+        const rootElement = document.getElementById('root');
+        const root = ReactDOM.createRoot(rootElement);
         root.render(<App />);
     </script>
 </body>
-</html>
 
+</html>
