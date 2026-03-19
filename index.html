@@ -130,10 +130,15 @@
                 }
                 for (let i = 1; i <= lastDay.getDate(); i++) {
                     const d = new Date(year, month, i);
-                    days.push({ date: d, current: true, today: d.getTime() === today.getTime() });
+                    days.push({ 
+                        date: d, 
+                        current: true, 
+                        isToday: d.getTime() === today.getTime() 
+                    });
                 }
                 while (days.length < 42) {
-                    days.push({ date: new Date(year, month + 1, days.length - lastDay.getDate() - startDay + 1), current: false });
+                    const d = new Date(year, month + 1, days.length - lastDay.getDate() - startDay + 1);
+                    days.push({ date: d, current: false });
                 }
                 return days;
             }, [currentDate, today]);
@@ -173,7 +178,7 @@
                         </div>
 
                         <div className="calendar-grid">
-                            {calendarDays.map(({ date, current, today }, i) => {
+                            {calendarDays.map(({ date, current, isToday }, i) => {
                                 const key = date.toISOString().split('T')[0];
                                 const person = schedule[key];
                                 const isPast = date.getTime() < today.getTime();
@@ -181,11 +186,11 @@
                                 return (
                                     <div key={key} className={`min-h-[100px] p-2 border-r border-b border-slate-50 flex flex-col ${!current ? 'opacity-30' : ''}`}>
                                         <div className="flex justify-between items-start mb-2">
-                                            <span className={`w-7 h-7 flex items-center justify-center rounded-full text-sm font-bold ${today ? 'bg-indigo-600 text-white' : 'text-slate-600'}`}>
+                                            <span className={`w-7 h-7 flex items-center justify-center rounded-full text-sm font-bold ${isToday ? 'bg-indigo-600 text-white' : 'text-slate-600'}`}>
                                                 {date.getDate()}
                                             </span>
                                             {person && current && (
-                                                <div className={`w-2 h-2 rounded-full ${date.getTime() < today.getTime() ? 'bg-slate-300' : 'bg-emerald-500'}`}></div>
+                                                <div className={`w-2 h-2 rounded-full ${isPast ? 'bg-slate-300' : 'bg-emerald-500'}`}></div>
                                             )}
                                         </div>
                                         {current && (
