@@ -1,103 +1,270 @@
 <!DOCTYPE html>
 <html lang="ru">
+
 <head>
     <meta charset="UTF-8" />
-    <title>Тест без React</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Увалы</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body {
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            background-color: #f0f4f8;
             background-image: url('6.jpg');
             background-size: cover;
             background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
             min-height: 100vh;
             margin: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-family: Arial, sans-serif;
         }
-        .test-box {
-            background: white;
-            padding: 40px;
-            border-radius: 20px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-            text-align: center;
-            max-width: 600px;
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, minmax(0, 1fr));
         }
-        .success { color: #10b981; }
-        .error { color: #ef4444; }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .loader {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-left-color: #8b5cf6;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+
+        select {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
+            background-position: right 0.5rem center;
+            background-repeat: no-repeat;
+            background-size: 1.5em 1.5em;
+            padding-right: 2.25rem;
+        }
     </style>
 </head>
-<body>
-    <div class="test-box">
-        <h1 id="status" class="error">⏳ Загрузка...</h1>
-        <p id="details" style="color: #666; margin-top: 20px;"></p>
-    </div>
 
-    <script>
-        // Тест 1: Проверяем, работает ли JavaScript вообще
-        try {
-            document.getElementById('status').className = 'success';
-            document.getElementById('status').textContent = '✅ JavaScript работает!';
-            document.getElementById('details').textContent = 'Браузер выполняет код. Теперь проверим React...';
-            
-            // Тест 2: Загружаем React
-            const script1 = document.createElement('script');
-            script1.src = 'https://unpkg.com/react@18/umd/react.production.min.js';
-            script1.onload = () => {
-                document.getElementById('details').textContent += '\n✅ React загружен (версия ' + React.version + ')';
-                
-                // Тест 3: Загружаем ReactDOM
-                const script2 = document.createElement('script');
-                script2.src = 'https://unpkg.com/react-dom@18/umd/react-dom.production.min.js';
-                script2.onload = () => {
-                    document.getElementById('details').textContent += '\n✅ ReactDOM загружен';
-                    
-                    // Тест 4: Загружаем Babel
-                    const script3 = document.createElement('script');
-                    script3.src = 'https://unpkg.com/@babel/standalone/babel.min.js';
-                    script3.onload = () => {
-                        document.getElementById('details').textContent += '\n✅ Babel загружен';
-                        document.getElementById('details').textContent += '\n\n🎉 Все библиотеки загружены! Проблема была в коде календаря.';
-                        
-                        // Тест 5: Пробуем создать простой React компонент БЕЗ JSX
-                        setTimeout(() => {
-                            try {
-                                const TestApp = React.createElement('div', {
-                                    style: { marginTop: '20px', padding: '20px', background: '#f0f9ff', borderRadius: '10px' }
-                                }, '✅ React создаёт элементы! Версия: ' + React.version);
-                                
-                                const container = document.createElement('div');
-                                container.id = 'react-test';
-                                document.querySelector('.test-box').appendChild(container);
-                                
-                                const root = ReactDOM.createRoot(container);
-                                root.render(TestApp);
-                                
-                                document.getElementById('details').textContent += '\n✅ React рендерит элементы!';
-                            } catch (e) {
-                                document.getElementById('details').textContent += '\n❌ Ошибка рендеринга: ' + e.message;
-                            }
-                        }, 100);
-                    };
-                    script3.onerror = () => {
-                        document.getElementById('details').textContent += '\n❌ Babel не загрузился';
-                    };
-                    document.head.appendChild(script3);
-                };
-                script2.onerror = () => {
-                    document.getElementById('details').textContent += '\n❌ ReactDOM не загрузился';
-                };
-                document.head.appendChild(script2);
+<body>
+    <div id="root"></div>
+
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo, useCallback } = React;
+        
+        const SCHEDULE_API_URL = "https://api.npoint.io/fbd0a6a7434618bd7c3b";
+        const NAMES = ['ФОКС', 'ПИВОВАР', 'НАТО'];
+
+        const App = () => {
+            const [currentDate, setCurrentDate] = useState(new Date());
+            const [schedule, setSchedule] = useState({});
+            const [isLoading, setIsLoading] = useState(true);
+            const [isSaving, setIsSaving] = useState(false);
+            const [error, setError] = useState(null);
+
+            const today = useMemo(() => {
+                const d = new Date();
+                d.setHours(0, 0, 0, 0);
+                return d;
+            }, []);
+
+            useEffect(() => {
+                fetchSchedule();
+            }, []);
+
+            const fetchSchedule = async () => {
+                setIsLoading(true);
+                setError(null);
+                try {
+                    const response = await fetch(SCHEDULE_API_URL);
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}`);
+                    }
+                    const data = await response.json();
+                    // nPoint возвращает данные напрямую
+                    setSchedule(data && typeof data === 'object' ? data : {});
+                } catch (err) {
+                    console.error("Ошибка загрузки:", err);
+                    setError("Не удалось загрузить график");
+                    setSchedule({});
+                } finally {
+                    setIsLoading(false);
+                }
             };
-            script1.onerror = () => {
-                document.getElementById('details').textContent += '\n❌ React не загрузился';
+
+            const saveSchedule = async (newSchedule) => {
+                setIsSaving(true);
+                try {
+                    const response = await fetch(SCHEDULE_API_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(newSchedule)
+                    });
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}`);
+                    }
+                } catch (err) {
+                    console.error("Ошибка сохранения:", err);
+                    setError("Не удалось сохранить");
+                } finally {
+                    setIsSaving(false);
+                }
             };
-            document.head.appendChild(script1);
-            
-        } catch (e) {
-            document.getElementById('status').textContent = '❌ JavaScript не работает!';
-            document.getElementById('details').textContent = 'Ошибка: ' + e.message;
-        }
+
+            const handleSelectPerson = useCallback((date, person) => {
+                const key = date.toISOString().split('T')[0];
+                setSchedule(prev => {
+                    const newSchedule = { ...prev };
+                    if (person) {
+                        newSchedule[key] = person;
+                    } else {
+                        delete newSchedule[key];
+                    }
+                    saveSchedule(newSchedule);
+                    return newSchedule;
+                });
+            }, []);
+
+            const changeMonth = (offset) => {
+                setCurrentDate(prev => new Date(prev.getFullYear(), prev.getMonth() + offset, 1));
+            };
+
+            const calendarDays = useMemo(() => {
+                const year = currentDate.getFullYear();
+                const month = currentDate.getMonth();
+                const firstDay = new Date(year, month, 1);
+                const lastDay = new Date(year, month + 1, 0);
+                const daysInMonth = lastDay.getDate();
+                const startDay = (firstDay.getDay() + 6) % 7;
+                const days = [];
+
+                const prevLastDay = new Date(year, month, 0).getDate();
+                for (let i = startDay; i > 0; i--) {
+                    days.push({ date: new Date(year, month - 1, prevLastDay - i + 1), isCurrent: false });
+                }
+                for (let i = 1; i <= daysInMonth; i++) {
+                    const date = new Date(year, month, i);
+                    days.push({ date, isCurrent: true, isToday: date.getTime() === today.getTime() });
+                }
+                const remaining = 42 - days.length;
+                for (let i = 1; i <= remaining; i++) {
+                    days.push({ date: new Date(year, month + 1, i), isCurrent: false });
+                }
+                return days;
+            }, [currentDate, today]);
+
+            if (isLoading) {
+                return (
+                    <div className="flex flex-col items-center justify-center min-h-screen">
+                        <div className="loader"></div>
+                        <div className="mt-4 text-lg font-semibold text-indigo-600">Загрузка...</div>
+                    </div>
+                );
+            }
+
+            return (
+                <div className="flex flex-col items-center justify-center min-h-screen p-2 sm:p-4">
+                    <div className="w-full max-w-4xl bg-white rounded-2xl shadow-xl p-4 sm:p-6 relative">
+                        {error && (
+                            <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded text-yellow-800 text-sm">
+                                ⚠️ {error}
+                            </div>
+                        )}
+
+                        <header className="flex items-center justify-between mb-4">
+                            <button onClick={() => changeMonth(-1)} className="p-2 rounded-full hover:bg-indigo-50">
+                                <svg className="h-6 w-6 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                                </svg>
+                            </button>
+                            <h2 className="text-lg sm:text-xl font-bold text-indigo-800 capitalize">
+                                {currentDate.toLocaleString('ru-RU', { month: 'long' })} {currentDate.getFullYear()}
+                            </h2>
+                            <button onClick={() => changeMonth(1)} className="p-2 rounded-full hover:bg-indigo-50">
+                                <svg className="h-6 w-6 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                </svg>
+                            </button>
+                        </header>
+
+                        <div className="calendar-grid text-xs sm:text-sm text-center font-bold text-indigo-900 mb-2">
+                            <div>Пн</div><div>Вт</div><div>Ср</div><div>Чт</div><div>Пт</div><div>Сб</div><div>Вс</div>
+                        </div>
+
+                        <div className="calendar-grid">
+                            {calendarDays.map(({ date, isCurrent, isToday }) => {
+                                const key = date.toISOString().split('T')[0];
+                                const person = schedule[key];
+                                const isPast = date < today;
+
+                                return (
+                                    <div key={key} className={`aspect-square flex flex-col justify-start items-center p-1 sm:p-2 border rounded-lg transition-all ${
+                                        isCurrent 
+                                            ? person 
+                                                ? 'bg-gradient-to-br from-violet-50 to-purple-50 border-violet-200' 
+                                                : 'bg-white border-slate-200 hover:bg-indigo-50'
+                                            : 'bg-slate-100 text-slate-400 border-transparent'
+                                    }`}>
+                                        <time className={`w-7 h-7 flex items-center justify-center rounded-full text-sm sm:text-base ${
+                                            isCurrent ? 'text-indigo-800' : 'text-slate-400'
+                                        } ${isToday ? 'bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-bold shadow-md' : ''}`}>
+                                            {date.getDate()}
+                                        </time>
+                                        
+                                        {isCurrent && person && (
+                                            <>
+                                                {(isPast || isToday) && (
+                                                    <div className="my-0.5 w-2 h-2 bg-green-500 rounded-full"></div>
+                                                )}
+                                                {!isPast && !isToday && (
+                                                    <div className="my-0.5 w-2 h-2 bg-yellow-500 rounded-full"></div>
+                                                )}
+                                            </>
+                                        )}
+                                        
+                                        {isCurrent && (
+                                            <div className="w-full mt-auto">
+                                                <select
+                                                    value={person || ''}
+                                                    onChange={(e) => handleSelectPerson(date, e.target.value)}
+                                                    className={`w-full mt-0.5 text-xs sm:text-sm bg-transparent focus:outline-none text-center cursor-pointer overflow-hidden whitespace-nowrap py-1 ${
+                                                        person ? 'text-purple-700 font-semibold' : 'text-slate-600'
+                                                    }`}
+                                                >
+                                                    <option value=""></option>
+                                                    {NAMES.map(name => <option key={name} value={name}>{name}</option>)}
+                                                </select>
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+
+                        {isSaving && (
+                            <div className="absolute bottom-4 right-4 text-xs text-violet-600 font-medium animate-pulse bg-white px-3 py-1 rounded-full shadow">
+                                Сохранение...
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
     </script>
 </body>
+
 </html>
