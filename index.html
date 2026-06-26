@@ -10,15 +10,14 @@
         body {
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
-           background-image: url('6.jpg');
-    background-size: cover; /* Или '100% 100%', если нужно растянуть с искажением */
-    background-position: center; /* Центрирует изображение */
-    background-repeat: no-repeat; /* Убирает повторение картинки */
-    background-attachment: fixed; /* Фиксирует фон при прокрутке (по желанию) */
-    
-    /* Чтобы фон занял всю высоту экрана */
-    min-height: 100vh;
-    margin: 0;
+            background-color: #f0f4f8;
+            background-image: url('6.jpg');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+            min-height: 100vh;
+            margin: 0;
         }
 
         .calendar-grid {
@@ -41,7 +40,6 @@
             animation: spin 1s linear infinite;
         }
 
-        /* Убираем стандартную стрелку у select */
         select {
             -webkit-appearance: none;
             -moz-appearance: none;
@@ -49,44 +47,57 @@
             background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
             background-position: right 0.5rem center;
             background-repeat: no-repeat;
-            background-size: 0.1em 0.1em;
+            background-size: 1.5em 1.5em;
             padding-right: 2.25rem;
         }
+        
+        .error-box {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            background: #fee;
+            border: 2px solid #c33;
+            color: #900;
+            padding: 16px;
+            border-radius: 8px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            z-index: 9999;
+        }
     </style>
-    <script type="importmap">
-{
-  "imports": {
-    "react": "https://aistudiocdn.com/react@^19.2.0",
-    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
-    "react/": "https://aistudiocdn.com/react@^19.2.0/"
-  }
-}
-</script>
 </head>
 
 <body>
- 
     <div id="root"></div>
+    <div id="error-display"></div>
 
-    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
     <script type="text/babel">
         const { useState, useEffect, useMemo, useCallback } = React;
-        const SCHEDULE_API_URL = "https://api.npoint.io/e66f8b1bd6f97c810520"
+        
+        // ВАЖНО: nPoint требует ID, который вы указали
+        const SCHEDULE_API_URL = "https://api.npoint.io/e66f8b1bd6f97c810520";
 
-    
+        const NAMES = ['ФОКС', 'ПИВОВАР', 'НАТО'];
 
-        const NAMES = [
-            'ФОКС', 'ПИВОВАР', 'НАТО'
-        ];
+        const showError = (msg) => {
+            const el = document.getElementById('error-display');
+            if (el) {
+                el.innerHTML = `<div class="error-box"><b>❌ Ошибка:</b><br>${msg}</div>`;
+            }
+            console.error(msg);
+        };
 
         const App = () => {
             const [currentDate, setCurrentDate] = useState(new Date());
             const [schedule, setSchedule] = useState({});
             const [isLoading, setIsLoading] = useState(true);
             const [isSaving, setIsSaving] = useState(false);
+            const [loadError, setLoadError] = useState(null);
 
             const today = useMemo(() => {
                 const d = new Date();
@@ -97,16 +108,22 @@
             useEffect(() => {
                 const fetchSchedule = async () => {
                     setIsLoading(true);
+                    setLoadError(null);
                     try {
-                        const response = await fetch(SCHEDULE_API_URL, { cache: 'no-cache' });
-                        if (response.ok) {
-                            const data = await response.json();
-                            setSchedule(data);
-                        } else if (response.status !== 404) {
-                            throw new Error(`HTTP error! status: ${response.status}`);
+                        const response = await fetch(SCHEDULE_API_URL);
+                        if (!response.ok) {
+                            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                         }
+                        const raw = await response.json();
+                        // nPoint возвращает { contents: {...}, bin: "..." }
+                        // Берём contents или сам объект, если это уже график
+                        const data = raw.contents !== undefined ? raw.contents : raw;
+                        setSchedule(data || {});
                     } catch (error) {
-                        console.error("Не удалось загрузить график:", error);
+                        const msg = `Не удалось загрузить график: ${error.message}`;
+                        setLoadError(msg);
+                        showError(msg);
+                        setSchedule({}); // fallback на пустой график
                     } finally {
                         setIsLoading(false);
                     }
@@ -117,13 +134,17 @@
             const saveSchedule = useCallback(async (newSchedule) => {
                 setIsSaving(true);
                 try {
-                    await fetch(SCHEDULE_API_URL, {
+                    const response = await fetch(SCHEDULE_API_URL, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(newSchedule)
                     });
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}`);
+                    }
                 } catch (error) {
-                    console.error("Ошибка сохранения графика:", error);
+                    const msg = `Ошибка сохранения: ${error.message}`;
+                    showError(msg);
                 } finally {
                     setIsSaving(false);
                 }
@@ -145,8 +166,7 @@
 
             const changeMonth = (offset) => {
                 setCurrentDate(prevDate => {
-                    const newDate = new Date(prevDate.getFullYear(), prevDate.getMonth() + offset, 1);
-                    return newDate;
+                    return new Date(prevDate.getFullYear(), prevDate.getMonth() + offset, 1);
                 });
             };
 
@@ -185,10 +205,18 @@
 
             return (
                 <div className="flex flex-col items-center justify-center min-h-screen p-2 sm:p-4">
-                    <div className="w-full max-w-4xl bg-white rounded-2xl shadow-xl p-4 sm:p-6">
+                    <div className="w-full max-w-4xl bg-white rounded-2xl shadow-xl p-4 sm:p-6 relative">
+                        {loadError && (
+                            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                                ⚠️ {loadError}. График открыт в режиме только для чтения.
+                            </div>
+                        )}
+                        
                         <header className="flex items-center justify-between mb-4">
                             <button onClick={() => changeMonth(-1)} className="p-2 rounded-full hover:bg-indigo-50 transition-colors">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                                </svg>
                             </button>
 
                             <h2 className="text-lg sm:text-xl font-bold text-indigo-800 text-center capitalize">
@@ -196,7 +224,9 @@
                             </h2>
                             
                             <button onClick={() => changeMonth(1)} className="p-2 rounded-full hover:bg-indigo-50 transition-colors">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                </svg>
                             </button>
                         </header>
 
@@ -204,64 +234,60 @@
                             <div>Пн</div><div>Вт</div><div>Ср</div><div>Чт</div><div>Пт</div><div>Сб</div><div>Вс</div>
                         </div>
 
-                       <div className="calendar-grid">
-  {calendarDays.map(({ date, isCurrentMonth, isToday }) => {
-    const key = date.toISOString().split('T')[0];
-    const selectedPerson = schedule[key];
-    const isPast = date.getTime() < today.getTime();
+                        <div className="calendar-grid">
+                            {calendarDays.map(({ date, isCurrentMonth, isToday }) => {
+                                const key = date.toISOString().split('T')[0];
+                                const selectedPerson = schedule[key];
+                                const isPast = date.getTime() < today.getTime();
 
-    const dayClass = `aspect-square flex flex-col justify-start items-center p-1 sm:p-2 border transition-all duration-200 rounded-lg ${
-      isCurrentMonth
-        ? selectedPerson
-          ? 'bg-gradient-to-br from-violet-50 to-purple-50 border-violet-200'
-          : 'bg-white border-slate-200 hover:bg-indigo-50'
-        : 'bg-slate-100 text-slate-400 border-transparent'
-    }`;
-    
-    const dateTextClass = `w-7 h-7 flex items-center justify-center rounded-full text-sm sm:text-base font-medium ${
-      isCurrentMonth ? 'text-indigo-800' : 'text-slate-400'
-    } ${isToday ? 'bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-bold shadow-md scale-110' : ''}`;
-    
-    //const selectClass = `w-full mt-0.5 text-xs sm:text-sm bg-transparent focus:outline-none text-center cursor-pointer truncate py-1 font-medium ${
-                    const selectClass = `w-full mt-0.5 text-xs sm:text-sm bg-transparent focus:outline-none text-center cursor-pointer overflow-hidden whitespace-nowrap py-1 font-medium ${
-      selectedPerson ? 'text-purple-700 font-semibold' : 'text-slate-600'
-    }`;
+                                const dayClass = `aspect-square flex flex-col justify-start items-center p-1 sm:p-2 border transition-all duration-200 rounded-lg ${
+                                    isCurrentMonth
+                                        ? selectedPerson
+                                            ? 'bg-gradient-to-br from-violet-50 to-purple-50 border-violet-200'
+                                            : 'bg-white border-slate-200 hover:bg-indigo-50'
+                                        : 'bg-slate-100 text-slate-400 border-transparent'
+                                }`;
+                                
+                                const dateTextClass = `w-7 h-7 flex items-center justify-center rounded-full text-sm sm:text-base font-medium ${
+                                    isCurrentMonth ? 'text-indigo-800' : 'text-slate-400'
+                                } ${isToday ? 'bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-bold shadow-md scale-110' : ''}`;
+                                
+                                const selectClass = `w-full mt-0.5 text-xs sm:text-sm bg-transparent focus:outline-none text-center cursor-pointer overflow-hidden whitespace-nowrap py-1 font-medium ${
+                                    selectedPerson ? 'text-purple-700 font-semibold' : 'text-slate-600'
+                                }`;
 
-    return (
-   <div key={key} className={dayClass}>
-  <time dateTime={key} className={dateTextClass}>
-    {date.getDate()}
-  </time>
-  {isCurrentMonth && selectedPerson && (
-    <>
-      {/* Сегодня или прошлое → зелёная */}
-      {(isPast || isToday) && (
-        <div className="my-0.5 w-2 h-2 bg-green-500 rounded-full" title="Дежурство завершено"></div>
-      )}
-      {/* Будущее → жёлтая */}
-      {!isPast && !isToday && (
-        <div className="my-0.5 w-2 h-2 bg-yellow-500 rounded-full" title="Дежурство запланировано"></div>
-      )}
-    </>
-  )}
-  {isCurrentMonth && (
-    <div className="w-full mt-auto">
-      <select
-        value={selectedPerson || ''}
-        onChange={(e) => handleSelectPerson(date, e.target.value)}
-        className={selectClass}
-        aria-label={`Назначить дежурного на ${key}`}
-      >
-        <option value=""></option>
-        {NAMES.map(name => <option key={name} value={name}>{name}</option>)}
-      </select>
-    </div>
-  )}
-</div>
-
-    );
-  })}
-</div>
+                                return (
+                                    <div key={key} className={dayClass}>
+                                        <time dateTime={key} className={dateTextClass}>
+                                            {date.getDate()}
+                                        </time>
+                                        {isCurrentMonth && selectedPerson && (
+                                            <>
+                                                {(isPast || isToday) && (
+                                                    <div className="my-0.5 w-2 h-2 bg-green-500 rounded-full" title="Дежурство завершено"></div>
+                                                )}
+                                                {!isPast && !isToday && (
+                                                    <div className="my-0.5 w-2 h-2 bg-yellow-500 rounded-full" title="Дежурство запланировано"></div>
+                                                )}
+                                            </>
+                                        )}
+                                        {isCurrentMonth && (
+                                            <div className="w-full mt-auto">
+                                                <select
+                                                    value={selectedPerson || ''}
+                                                    onChange={(e) => handleSelectPerson(date, e.target.value)}
+                                                    className={selectClass}
+                                                    aria-label={`Назначить дежурного на ${key}`}
+                                                >
+                                                    <option value=""></option>
+                                                    {NAMES.map(name => <option key={name} value={name}>{name}</option>)}
+                                                </select>
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
 
                         {isSaving && <div className="absolute bottom-4 right-4 text-xs text-violet-600 font-medium animate-pulse">Сохранение...</div>}
                     </div>
@@ -269,9 +295,13 @@
             );
         };
 
-        const rootElement = document.getElementById('root');
-        const root = ReactDOM.createRoot(rootElement);
-        root.render(<App />);
+        try {
+            const rootElement = document.getElementById('root');
+            const root = ReactDOM.createRoot(rootElement);
+            root.render(<App />);
+        } catch (error) {
+            showError(`React не смог запуститься: ${error.message}`);
+        }
     </script>
 </body>
 
