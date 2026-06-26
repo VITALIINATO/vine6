@@ -50,27 +50,11 @@
             background-size: 1.5em 1.5em;
             padding-right: 2.25rem;
         }
-        
-        .error-box {
-            position: fixed;
-            top: 20px;
-            left: 20px;
-            right: 20px;
-            background: #fee;
-            border: 2px solid #c33;
-            color: #900;
-            padding: 16px;
-            border-radius: 8px;
-            font-family: monospace;
-            white-space: pre-wrap;
-            z-index: 9999;
-        }
     </style>
 </head>
 
 <body>
     <div id="root"></div>
-    <div id="error-display"></div>
 
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -79,25 +63,17 @@
     <script type="text/babel">
         const { useState, useEffect, useMemo, useCallback } = React;
         
-        // ВАЖНО: nPoint требует ID, который вы указали
+        // ВАША НОВАЯ КОРЗИНА NPOINT
         const SCHEDULE_API_URL = "https://api.npoint.io/fbd0a6a7434618bd7c3b";
 
         const NAMES = ['ФОКС', 'ПИВОВАР', 'НАТО'];
-
-        const showError = (msg) => {
-            const el = document.getElementById('error-display');
-            if (el) {
-                el.innerHTML = `<div class="error-box"><b>❌ Ошибка:</b><br>${msg}</div>`;
-            }
-            console.error(msg);
-        };
 
         const App = () => {
             const [currentDate, setCurrentDate] = useState(new Date());
             const [schedule, setSchedule] = useState({});
             const [isLoading, setIsLoading] = useState(true);
             const [isSaving, setIsSaving] = useState(false);
-            const [loadError, setLoadError] = useState(null);
+            const [errorMessage, setErrorMessage] = useState(null);
 
             const today = useMemo(() => {
                 const d = new Date();
@@ -105,25 +81,34 @@
                 return d;
             }, []);
 
+            // Загрузка графика
             useEffect(() => {
                 const fetchSchedule = async () => {
                     setIsLoading(true);
-                    setLoadError(null);
+                    setErrorMessage(null);
                     try {
-                        const response = await fetch(SCHEDULE_API_URL);
+                        const response = await fetch(SCHEDULE_API_URL, { cache: 'no-store' });
                         if (!response.ok) {
                             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                         }
                         const raw = await response.json();
-                        // nPoint возвращает { contents: {...}, bin: "..." }
-                        // Берём contents или сам объект, если это уже график
-                        const data = raw.contents !== undefined ? raw.contents : raw;
-                        setSchedule(data || {});
+                        
+                        // nPoint возвращает данные напрямую, но на всякий случай проверяем структуру
+                        let data = raw;
+                        if (raw && typeof raw === 'object' && raw.contents !== undefined && !Array.isArray(raw.contents)) {
+                            // Если есть обёртка contents и это не сам график — используем её
+                            const keys = Object.keys(raw.contents);
+                            const looksLikeSchedule = keys.length === 0 || /^\d{4}-\d{2}-\d{2}$/.test(keys[0]);
+                            if (looksLikeSchedule) {
+                                data = raw.contents;
+                            }
+                        }
+                        
+                        setSchedule(data && typeof data === 'object' ? data : {});
                     } catch (error) {
-                        const msg = `Не удалось загрузить график: ${error.message}`;
-                        setLoadError(msg);
-                        showError(msg);
-                        setSchedule({}); // fallback на пустой график
+                        console.error("Ошибка загрузки графика:", error);
+                        setErrorMessage(`Не удалось загрузить данные: ${error.message}`);
+                        setSchedule({});
                     } finally {
                         setIsLoading(false);
                     }
@@ -131,6 +116,7 @@
                 fetchSchedule();
             }, []);
 
+            // Сохранение графика
             const saveSchedule = useCallback(async (newSchedule) => {
                 setIsSaving(true);
                 try {
@@ -143,8 +129,8 @@
                         throw new Error(`HTTP ${response.status}`);
                     }
                 } catch (error) {
-                    const msg = `Ошибка сохранения: ${error.message}`;
-                    showError(msg);
+                    console.error("Ошибка сохранения графика:", error);
+                    setErrorMessage(`Не удалось сохранить: ${error.message}`);
                 } finally {
                     setIsSaving(false);
                 }
@@ -206,9 +192,9 @@
             return (
                 <div className="flex flex-col items-center justify-center min-h-screen p-2 sm:p-4">
                     <div className="w-full max-w-4xl bg-white rounded-2xl shadow-xl p-4 sm:p-6 relative">
-                        {loadError && (
+                        {errorMessage && (
                             <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-                                ⚠️ {loadError}. График открыт в режиме только для чтения.
+                                ⚠️ {errorMessage}
                             </div>
                         )}
                         
@@ -289,19 +275,19 @@
                             })}
                         </div>
 
-                        {isSaving && <div className="absolute bottom-4 right-4 text-xs text-violet-600 font-medium animate-pulse">Сохранение...</div>}
+                        {isSaving && (
+                            <div className="absolute bottom-4 right-4 text-xs text-violet-600 font-medium animate-pulse bg-white px-3 py-1 rounded-full shadow">
+                                Сохранение...
+                            </div>
+                        )}
                     </div>
                 </div>
             );
         };
 
-        try {
-            const rootElement = document.getElementById('root');
-            const root = ReactDOM.createRoot(rootElement);
-            root.render(<App />);
-        } catch (error) {
-            showError(`React не смог запуститься: ${error.message}`);
-        }
+        const rootElement = document.getElementById('root');
+        const root = ReactDOM.createRoot(rootElement);
+        root.render(<App />);
     </script>
 </body>
 
