@@ -31,29 +31,33 @@
             height: 40px;
             animation: spin 1s linear infinite;
         }
-        /* УЛУЧШЕННЫЙ SELECT */
+        /* ПРОСТОЙ SELECT БЕЗ СТРЕЛКИ */
         .day-select {
-            -webkit-appearance: none;
-            -moz-appearance: none;
-            appearance: none;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
-            background-repeat: no-repeat;
-            background-position: right 4px center;
-            background-size: 14px 14px;
-            /* ВАЖНО: padding-right больше, чтобы текст не заходил под стрелку */
-            padding-right: 24px;
-            text-align: center;
-            cursor: pointer;
             width: 100%;
+            text-align: center;
             font-weight: 600;
-            transition: all 0.2s;
+            font-size: 11px;
+            line-height: 1.2;
+            padding: 4px 2px;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            color: inherit;
+            /* Важно: разрешаем перенос текста */
+            white-space: normal;
+            word-wrap: break-word;
+            overflow: visible;
         }
-        .day-select:hover {
-            background-color: rgba(139, 92, 246, 0.1);
+        @media (min-width: 640px) {
+            .day-select {
+                font-size: 12px;
+                padding: 6px 4px;
+            }
         }
         .day-select option {
             text-align: center;
             padding: 8px;
+            font-size: 14px;
         }
         .error-box {
             position: fixed;
@@ -234,8 +238,7 @@
                                         React.createElement('select', {
                                             value: person || '',
                                             onChange: (e) => handleSelect(date, e.target.value),
-                                            className: 'day-select text-xs sm:text-sm ' +
-                                                (person ? 'text-purple-700' : 'text-slate-500')
+                                            className: 'day-select ' + (person ? 'text-purple-700' : 'text-slate-500')
                                         },
                                             React.createElement('option', { value: '' }, '—'),
                                             NAMES.map(name => React.createElement('option', { key: name, value: name }, name))
