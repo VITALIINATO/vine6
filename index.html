@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8" />
-    <title>Тест</title>
+    <title>Тест без React</title>
     <style>
         body {
             background-image: url('6.jpg');
@@ -15,37 +15,89 @@
             justify-content: center;
             font-family: Arial, sans-serif;
         }
+        .test-box {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            text-align: center;
+            max-width: 600px;
+        }
+        .success { color: #10b981; }
+        .error { color: #ef4444; }
     </style>
 </head>
 <body>
-    <div id="root"></div>
+    <div class="test-box">
+        <h1 id="status" class="error">⏳ Загрузка...</h1>
+        <p id="details" style="color: #666; margin-top: 20px;"></p>
+    </div>
 
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-
-    <script type="text/babel">
-        const App = () => {
-            return (
-                <div style={{
-                    background: 'white',
-                    padding: '40px',
-                    borderRadius: '20px',
-                    boxShadow: '0 10px 40px rgba(0,0,0,0.2)',
-                    textAlign: 'center'
-                }}>
-                    <h1 style={{ color: '#4f46e5', fontSize: '32px', margin: '0 0 20px 0' }}>
-                        ✅ React работает!
-                    </h1>
-                    <p style={{ color: '#666', fontSize: '18px', margin: '0' }}>
-                        Если вы видите это сообщение — значит React загрузился успешно.
-                    </p>
-                </div>
-            );
-        };
-
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
+    <script>
+        // Тест 1: Проверяем, работает ли JavaScript вообще
+        try {
+            document.getElementById('status').className = 'success';
+            document.getElementById('status').textContent = '✅ JavaScript работает!';
+            document.getElementById('details').textContent = 'Браузер выполняет код. Теперь проверим React...';
+            
+            // Тест 2: Загружаем React
+            const script1 = document.createElement('script');
+            script1.src = 'https://unpkg.com/react@18/umd/react.production.min.js';
+            script1.onload = () => {
+                document.getElementById('details').textContent += '\n✅ React загружен (версия ' + React.version + ')';
+                
+                // Тест 3: Загружаем ReactDOM
+                const script2 = document.createElement('script');
+                script2.src = 'https://unpkg.com/react-dom@18/umd/react-dom.production.min.js';
+                script2.onload = () => {
+                    document.getElementById('details').textContent += '\n✅ ReactDOM загружен';
+                    
+                    // Тест 4: Загружаем Babel
+                    const script3 = document.createElement('script');
+                    script3.src = 'https://unpkg.com/@babel/standalone/babel.min.js';
+                    script3.onload = () => {
+                        document.getElementById('details').textContent += '\n✅ Babel загружен';
+                        document.getElementById('details').textContent += '\n\n🎉 Все библиотеки загружены! Проблема была в коде календаря.';
+                        
+                        // Тест 5: Пробуем создать простой React компонент БЕЗ JSX
+                        setTimeout(() => {
+                            try {
+                                const TestApp = React.createElement('div', {
+                                    style: { marginTop: '20px', padding: '20px', background: '#f0f9ff', borderRadius: '10px' }
+                                }, '✅ React создаёт элементы! Версия: ' + React.version);
+                                
+                                const container = document.createElement('div');
+                                container.id = 'react-test';
+                                document.querySelector('.test-box').appendChild(container);
+                                
+                                const root = ReactDOM.createRoot(container);
+                                root.render(TestApp);
+                                
+                                document.getElementById('details').textContent += '\n✅ React рендерит элементы!';
+                            } catch (e) {
+                                document.getElementById('details').textContent += '\n❌ Ошибка рендеринга: ' + e.message;
+                            }
+                        }, 100);
+                    };
+                    script3.onerror = () => {
+                        document.getElementById('details').textContent += '\n❌ Babel не загрузился';
+                    };
+                    document.head.appendChild(script3);
+                };
+                script2.onerror = () => {
+                    document.getElementById('details').textContent += '\n❌ ReactDOM не загрузился';
+                };
+                document.head.appendChild(script2);
+            };
+            script1.onerror = () => {
+                document.getElementById('details').textContent += '\n❌ React не загрузился';
+            };
+            document.head.appendChild(script1);
+            
+        } catch (e) {
+            document.getElementById('status').textContent = '❌ JavaScript не работает!';
+            document.getElementById('details').textContent = 'Ошибка: ' + e.message;
+        }
     </script>
 </body>
 </html>
