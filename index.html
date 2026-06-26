@@ -31,33 +31,15 @@
             height: 40px;
             animation: spin 1s linear infinite;
         }
-        /* ПРОСТОЙ SELECT БЕЗ СТРЕЛКИ */
-        .day-select {
-            width: 100%;
-            text-align: center;
-            font-weight: 600;
-            font-size: 11px;
-            line-height: 1.2;
-            padding: 4px 2px;
-            background: transparent;
-            border: none;
-            cursor: pointer;
-            color: inherit;
-            /* Важно: разрешаем перенос текста */
-            white-space: normal;
-            word-wrap: break-word;
-            overflow: visible;
-        }
-        @media (min-width: 640px) {
-            .day-select {
-                font-size: 12px;
-                padding: 6px 4px;
-            }
-        }
-        .day-select option {
-            text-align: center;
-            padding: 8px;
-            font-size: 14px;
+        select {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
+            background-position: right 0.5rem center;
+            background-repeat: no-repeat;
+            background-size: 1.5em 1.5em;
+            padding-right: 2.25rem;
         }
         .error-box {
             position: fixed;
@@ -72,6 +54,8 @@
             font-family: monospace;
             white-space: pre-wrap;
             z-index: 9999;
+            max-height: 50vh;
+            overflow: auto;
         }
     </style>
 </head>
@@ -81,17 +65,20 @@
 
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
     <script>
+        // Перехватываем все ошибки
         window.onerror = function(msg, url, line, col, error) {
-            const errorText = `Ошибка: ${msg}\nФайл: ${url}\nСтрока: ${line}`;
-            document.getElementById('error-container').innerHTML = `<div class="error-box"><b>❌ ОШИБКА:</b>\n\n${errorText}</div>`;
+            const errorText = `Ошибка: ${msg}\nФайл: ${url}\nСтрока: ${line}\nСтолбец: ${col}\n\nStack:\n${error ? error.stack : 'N/A'}`;
+            document.getElementById('error-container').innerHTML = `<div class="error-box"><b>❌ КРИТИЧЕСКАЯ ОШИБКА:</b>\n\n${errorText}</div>`;
+            console.error(errorText);
             return false;
         };
     </script>
 
-    <script>
-        (function() {
+    <script type="text/babel">
+        try {
             const { useState, useEffect, useMemo, useCallback } = React;
             
             const SCHEDULE_API_URL = "https://api.npoint.io/fbd0a6a7434618bd7c3b";
@@ -191,26 +178,18 @@
                         error && React.createElement('div', { className: 'mb-4 p-3 bg-red-50 border border-red-200 rounded text-red-700 text-sm' }, error),
                         
                         React.createElement('header', { className: 'flex items-center justify-between mb-4' },
-                            React.createElement('button', { onClick: () => changeMonth(-1), className: 'p-2 rounded-full hover:bg-indigo-50 transition-colors' }, 
-                                React.createElement('svg', { className: 'h-6 w-6 text-indigo-600', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
-                                    React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: 2, d: 'M15 19l-7-7 7-7' })
-                                )
-                            ),
+                            React.createElement('button', { onClick: () => changeMonth(-1), className: 'p-2 rounded-full hover:bg-indigo-50' }, '←'),
                             React.createElement('h2', { className: 'text-lg sm:text-xl font-bold text-indigo-800 capitalize' },
                                 currentDate.toLocaleString('ru-RU', { month: 'long' }) + ' ' + currentDate.getFullYear()
                             ),
-                            React.createElement('button', { onClick: () => changeMonth(1), className: 'p-2 rounded-full hover:bg-indigo-50 transition-colors' },
-                                React.createElement('svg', { className: 'h-6 w-6 text-indigo-600', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
-                                    React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: 2, d: 'M9 5l7 7-7 7' })
-                                )
-                            )
+                            React.createElement('button', { onClick: () => changeMonth(1), className: 'p-2 rounded-full hover:bg-indigo-50' }, '→')
                         ),
 
                         React.createElement('div', { className: 'calendar-grid text-xs sm:text-sm text-center font-bold text-indigo-900 mb-2' },
                             ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'].map(d => React.createElement('div', { key: d }, d))
                         ),
 
-                        React.createElement('div', { className: 'calendar-grid gap-1' },
+                        React.createElement('div', { className: 'calendar-grid' },
                             days.map(({ date, current, today: isToday }) => {
                                 const key = date.toISOString().split('T')[0];
                                 const person = schedule[key];
@@ -218,29 +197,28 @@
 
                                 return React.createElement('div', { 
                                     key, 
-                                    className: 'aspect-square flex flex-col justify-start items-center p-1 sm:p-2 border rounded-lg transition-all ' +
-                                        (current ? (person ? 'bg-gradient-to-br from-violet-50 to-purple-50 border-violet-200 shadow-sm' : 'bg-white border-slate-200 hover:bg-indigo-50 hover:shadow') : 'bg-slate-100 text-slate-400 border-transparent')
+                                    className: `aspect-square flex flex-col justify-start items-center p-1 sm:p-2 border rounded-lg transition-all ` +
+                                        (current ? (person ? 'bg-gradient-to-br from-violet-50 to-purple-50 border-violet-200' : 'bg-white border-slate-200 hover:bg-indigo-50') : 'bg-slate-100 text-slate-400 border-transparent')
                                 },
                                     React.createElement('time', { 
-                                        className: 'w-7 h-7 flex items-center justify-center rounded-full text-sm sm:text-base font-semibold ' +
+                                        className: `w-7 h-7 flex items-center justify-center rounded-full text-sm sm:text-base ` +
                                             (current ? 'text-indigo-800' : 'text-slate-400') +
-                                            (isToday ? ' bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-bold shadow-lg scale-110' : '')
+                                            (isToday ? ' bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-bold shadow-md' : '')
                                     }, date.getDate()),
                                     
                                     current && person && React.createElement(React.Fragment, null,
-                                        React.createElement('div', { className: 'flex items-center gap-1 mt-0.5' },
-                                            (isPast || isToday) && React.createElement('div', { className: 'w-2 h-2 bg-green-500 rounded-full', title: 'Завершено' }),
-                                            !isPast && !isToday && React.createElement('div', { className: 'w-2 h-2 bg-yellow-500 rounded-full', title: 'Запланировано' })
-                                        )
+                                        (isPast || isToday) && React.createElement('div', { className: 'my-0.5 w-2 h-2 bg-green-500 rounded-full' }),
+                                        !isPast && !isToday && React.createElement('div', { className: 'my-0.5 w-2 h-2 bg-yellow-500 rounded-full' })
                                     ),
                                     
-                                    current && React.createElement('div', { className: 'w-full mt-auto pt-0.5' },
+                                    current && React.createElement('div', { className: 'w-full mt-auto' },
                                         React.createElement('select', {
                                             value: person || '',
                                             onChange: (e) => handleSelect(date, e.target.value),
-                                            className: 'day-select ' + (person ? 'text-purple-700' : 'text-slate-500')
+                                            className: `w-full mt-0.5 text-xs sm:text-sm bg-transparent focus:outline-none text-center cursor-pointer overflow-hidden whitespace-nowrap py-1 ` +
+                                                (person ? 'text-purple-700 font-semibold' : 'text-slate-600')
                                         },
-                                            React.createElement('option', { value: '' }, '—'),
+                                            React.createElement('option', { value: '' }),
                                             NAMES.map(name => React.createElement('option', { key: name, value: name }, name))
                                         )
                                     )
@@ -248,15 +226,26 @@
                             })
                         ),
 
-                        isSaving && React.createElement('div', { className: 'absolute bottom-4 right-4 text-xs text-violet-600 font-medium animate-pulse bg-violet-50 px-3 py-1 rounded-full shadow border border-violet-200' }, '💾 Сохранение...')
+                        isSaving && React.createElement('div', { className: 'absolute bottom-4 right-4 text-xs text-violet-600 font-medium animate-pulse bg-white px-3 py-1 rounded-full shadow' }, 'Сохранение...')
                     )
                 );
             };
 
-            const root = ReactDOM.createRoot(document.getElementById('root'));
+            const rootElement = document.getElementById('root');
+            if (!rootElement) {
+                throw new Error("Элемент #root не найден в DOM!");
+            }
+            
+            const root = ReactDOM.createRoot(rootElement);
             root.render(React.createElement(App));
-            console.log("✅ App loaded successfully!");
-        })();
+            
+            console.log("✅ React приложение запущено успешно!");
+            
+        } catch (error) {
+            const errorText = `Ошибка при инициализации React:\n\n${error.message}\n\nStack:\n${error.stack}`;
+            document.getElementById('error-container').innerHTML = `<div class="error-box"><b>❌ ОШИБКА REACT:</b>\n\n${errorText}</div>`;
+            console.error(errorText);
+        }
     </script>
 </body>
 </html>
