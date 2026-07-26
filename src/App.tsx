@@ -57,16 +57,25 @@ export function App() {
   // Merge pending edits over fetched remote schedule safely
   const mergeScheduleWithPending = useCallback((remoteSchedule: Record<string, string>) => {
     const now = Date.now();
-    const safeRemote = (remoteSchedule && typeof remoteSchedule === 'object' && !Array.isArray(remoteSchedule)) ? remoteSchedule : {};
+    const safeRemote: Record<string, string> = {};
+
+    if (remoteSchedule && typeof remoteSchedule === 'object' && !Array.isArray(remoteSchedule)) {
+      Object.entries(remoteSchedule).forEach(([k, v]) => {
+        if (/^\d{4}-\d{2}-\d{2}$/.test(k) && typeof v === 'string' && v.trim()) {
+          safeRemote[k] = v;
+        }
+      });
+    }
+
     const merged = { ...safeRemote };
-    
+
     Object.entries(pendingEditsRef.current).forEach(([key, edit]) => {
       // If remote already reflects the exact local choice, we consider it confirmed
       if (safeRemote[key] === edit.person) {
         delete pendingEditsRef.current[key];
       } else {
-        // Keep pending local choice for up to 2 minutes if remote hasn't updated yet
-        if (now - edit.timestamp < 120000) {
+        // Keep pending local choice for up to 60 seconds if remote hasn't updated yet
+        if (now - edit.timestamp < 60000) {
           if (edit.person) {
             merged[key] = edit.person;
           } else {
@@ -214,20 +223,27 @@ export function App() {
 
     // Calculate updated schedule from current fresh ref
     const current = scheduleRef.current;
-    const newSchedule = { ...current };
+    const rawSchedule = { ...current };
     if (person) {
-      newSchedule[dateKey] = person;
+      rawSchedule[dateKey] = person;
     } else {
-      delete newSchedule[dateKey];
+      delete rawSchedule[dateKey];
     }
 
+    const cleanSchedule: Record<string, string> = {};
+    Object.entries(rawSchedule).forEach(([k, v]) => {
+      if (/^\d{4}-\d{2}-\d{2}$/.test(k) && typeof v === 'string' && v.trim()) {
+        cleanSchedule[k] = v;
+      }
+    });
+
     // Instant local UI & storage update (0ms delay)
-    scheduleRef.current = newSchedule;
-    setSchedule(newSchedule);
+    scheduleRef.current = cleanSchedule;
+    setSchedule(cleanSchedule);
     const nowIso = new Date().toISOString();
     setLastUpdated(nowIso);
     try {
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(newSchedule));
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(cleanSchedule));
     } catch (e) {
       console.error('LocalStorage error:', e);
     }
@@ -241,7 +257,7 @@ export function App() {
             const res = await fetch('/api/schedule', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ dateKey, person, fullSchedule: newSchedule }),
+              body: JSON.stringify({ dateKey, person, fullSchedule: cleanSchedule }),
             });
             if (!res.ok) hasServerApiRef.current = false;
           } catch {
@@ -252,7 +268,7 @@ export function App() {
         await fetch(NPOINT_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(newSchedule),
+          body: JSON.stringify(cleanSchedule),
         });
       } catch (err) {
         console.error('Save error:', err);

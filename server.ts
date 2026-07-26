@@ -39,7 +39,7 @@ async function syncFromNpoint() {
       if (remoteData && typeof remoteData === 'object') {
         const remoteSchedule: Record<string, string> = {};
         for (const [k, v] of Object.entries(remoteData)) {
-          if (typeof v === 'string') {
+          if (/^\d{4}-\d{2}-\d{2}$/.test(k) && typeof v === 'string' && v.trim()) {
             remoteSchedule[k] = v;
           }
         }
