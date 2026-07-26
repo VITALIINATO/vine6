@@ -1,0 +1,39 @@
+@import "tailwindcss";
+
+body {
+  background: linear-gradient(135deg, #ebf3ea 0%, #dbe8da 40%, #c9dcc7 100%);
+  background-attachment: fixed;
+  min-height: 100vh;
+  margin: 0;
+  color: #1e293b;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loader {
+  border: 4px solid rgba(16, 185, 129, 0.25);
+  border-left-color: #059669;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
+}
+
+select {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-image: none;
+  padding: 0;
+  margin: 0;
+  text-align-last: center;
+}

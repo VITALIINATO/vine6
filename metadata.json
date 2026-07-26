@@ -1,0 +1,6 @@
+{
+  "name": "График дежурств",
+  "description": "Удобный календарь для назначения дежурных с синхронизацией данных",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
