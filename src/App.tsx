@@ -3,7 +3,7 @@ import saloBgImage from './assets/images/salo_7_bg_1784993340426.jpg';
 
 const LOCAL_STORAGE_KEY = 'schedule_data';
 const NAMES = ['ПИВОВАР', 'ФОКС', 'БАГС'];
-const NPOINT_URL = 'https://api.npoint.io/e8f967697b10fff8ec7a';
+const NPOINT_URL = 'https://api.npoint.io/79a6e300f4fe3e509658';
 
 // Check if running on GitHub Pages or static host without backend API
 const IS_STATIC_HOST = typeof window !== 'undefined' && (
@@ -57,11 +57,12 @@ export function App() {
   // Merge pending edits over fetched remote schedule safely
   const mergeScheduleWithPending = useCallback((remoteSchedule: Record<string, string>) => {
     const now = Date.now();
-    const merged = { ...remoteSchedule };
+    const safeRemote = (remoteSchedule && typeof remoteSchedule === 'object' && !Array.isArray(remoteSchedule)) ? remoteSchedule : {};
+    const merged = { ...safeRemote };
     
     Object.entries(pendingEditsRef.current).forEach(([key, edit]) => {
       // If remote already reflects the exact local choice, we consider it confirmed
-      if (remoteSchedule[key] === edit.person) {
+      if (safeRemote[key] === edit.person) {
         delete pendingEditsRef.current[key];
       } else {
         // Keep pending local choice for up to 2 minutes if remote hasn't updated yet

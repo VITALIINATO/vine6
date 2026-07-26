@@ -2,7 +2,7 @@ import express from 'express';
 import path from 'path';
 import { createServer as createViteServer } from 'vite';
 
-const SCHEDULE_API_URL = 'https://api.npoint.io/e8f967697b10fff8ec7a';
+const SCHEDULE_API_URL = 'https://api.npoint.io/79a6e300f4fe3e509658';
 const PORT = 3000;
 
 interface ScheduleState {
